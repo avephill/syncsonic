@@ -2,3 +2,13 @@
 config.json
 __pycache__
 dist
+
+# SyncSonic runtime files — never commit these
+~/.config/syncsonic/
+src/syncsonic.egg-info/
+
+# Per-install secret key (signs session cookies)
+secret_key
+
+# Manifest database
+manifest.db

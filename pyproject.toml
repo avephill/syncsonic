@@ -22,10 +22,11 @@ classifiers = [
 ]
 license = "GPL-3.0-or-later"
 license-files = ["LICEN[CS]E*"]
-dependencies = ["requests"]
+dependencies = ["requests", "flask"]
 
 [project.scripts]
 syncsonic = "syncsonic.__main__:main"
+syncsonic-web = "syncsonic.web.app:main"
 
 [project.urls]
 Homepage = "https://github.com/tepiloxtl/syncsonic"
