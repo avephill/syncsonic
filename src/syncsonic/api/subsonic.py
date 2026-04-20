@@ -214,6 +214,21 @@ class SubsonicClient:
         sr = self.get_json("getPlaylist", {"id": playlist_id})
         return sr["playlist"]
 
+    def track_exists(self, track_id: str) -> bool:
+        """
+        Return True when a track ID still exists on the server.
+
+        Subsonic/Navidrome uses error code 70 for "data not found".
+        """
+        try:
+            self.get_json("getSong", {"id": track_id})
+            return True
+        except SubsonicError as exc:
+            msg = str(exc).lower()
+            if "error 70" in msg or "not found" in msg:
+                return False
+            raise
+
     def search(self, query: str, song_count: int = 20) -> dict:
         sr = self.get_json("search3", {
             "query": query,

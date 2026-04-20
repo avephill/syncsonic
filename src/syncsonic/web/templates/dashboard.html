@@ -82,10 +82,10 @@
   </a>
   {% if device %}
   <form method="post" action="{{ url_for('rebuild_manifest_route') }}"
-        onsubmit="return confirm('Scan device and rebuild manifest? This may take a moment.')">
+        onsubmit="return confirm('Reconcile library now? This scans device files and removes local tracks that no longer exist in Navidrome.')">
     <button type="submit"
             class="bg-gray-800 hover:bg-gray-700 text-gray-200 text-sm font-medium px-5 py-2.5 rounded-lg transition-colors">
-      Rebuild Manifest
+      Reconcile Library
     </button>
   </form>
   <form method="post" action="{{ url_for('device_eject') }}"

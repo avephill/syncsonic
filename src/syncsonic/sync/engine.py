@@ -389,6 +389,54 @@ def rebuild_manifest(mount: Path, db_path: Path) -> dict:
     return mf.rebuild_from_device(db_path, files_on_disk)
 
 
+def prune_tracks_missing_on_server(
+    client: SubsonicClient,
+    mount: Path,
+    db_path: Path,
+) -> dict:
+    """
+    Remove local files/manifest entries for tracks that no longer exist server-side.
+
+    Uses manifest track IDs for lookups and only removes manifest entries when the
+    local file has been removed (or was already missing on disk).
+    """
+    tracked = mf.list_synced_tracks(db_path)
+    missing_on_server = 0
+    removed_files = 0
+    removed_manifest = 0
+    failed_file_deletes = 0
+
+    for row in tracked:
+        track_id = row["id"]
+        if client.track_exists(track_id):
+            continue
+
+        missing_on_server += 1
+        rel_path = Path(row["device_path"])
+        abs_path = mount / rel_path
+
+        if abs_path.exists():
+            try:
+                abs_path.unlink()
+                removed_files += 1
+            except Exception:
+                failed_file_deletes += 1
+                continue
+
+        mf.delete_track(db_path, track_id)
+        removed_manifest += 1
+
+    removed_albums = mf.prune_empty_albums(db_path)
+    return {
+        "checked_tracks": len(tracked),
+        "missing_on_server": missing_on_server,
+        "removed_files": removed_files,
+        "removed_manifest_tracks": removed_manifest,
+        "removed_empty_albums": removed_albums,
+        "failed_file_deletes": failed_file_deletes,
+    }
+
+
 # ============================================================================
 # Playlist conflict detection
 # ============================================================================

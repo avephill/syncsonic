@@ -547,9 +547,29 @@ def rebuild_manifest_route():
         return redirect(url_for("dashboard"))
 
     result = engine.rebuild_manifest(mount, _db_path)
+
+    cleanup_note = ""
+    if c["server"].get("host"):
+        try:
+            client = _get_client(c)
+            cleaned = engine.prune_tracks_missing_on_server(client, mount, _db_path)
+            cleanup_note = (
+                f" Pruned missing-server tracks: checked {cleaned['checked_tracks']}, "
+                f"missing {cleaned['missing_on_server']}, removed files {cleaned['removed_files']}, "
+                f"removed manifest tracks {cleaned['removed_manifest_tracks']}, "
+                f"removed empty albums {cleaned['removed_empty_albums']}."
+            )
+            if cleaned["failed_file_deletes"] > 0:
+                flash(
+                    f"Could not delete {cleaned['failed_file_deletes']} local file(s) due to file permissions or locks.",
+                    "warning",
+                )
+        except Exception as exc:
+            flash(f"Server prune skipped: {exc}", "warning")
+
     flash(
-        f"Manifest rebuilt: removed {result['removed_tracks']} track(s) "
-        f"and {result['removed_albums']} album(s) no longer on device.",
+        f"Library reconciled: removed {result['removed_tracks']} track(s) "
+        f"and {result['removed_albums']} album row(s) no longer on device.{cleanup_note}",
         "success",
     )
     return redirect(url_for("dashboard"))

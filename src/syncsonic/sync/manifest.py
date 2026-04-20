@@ -151,6 +151,19 @@ def get_track(db_path: Path, track_id: str) -> dict | None:
     return dict(row) if row else None
 
 
+def list_synced_tracks(db_path: Path) -> list[dict]:
+    with _connect(db_path) as con:
+        rows = con.execute(
+            "SELECT id, album_id, device_path FROM synced_tracks"
+        ).fetchall()
+    return [dict(r) for r in rows]
+
+
+def delete_track(db_path: Path, track_id: str) -> None:
+    with _connect(db_path) as con:
+        con.execute("DELETE FROM synced_tracks WHERE id=?", (track_id,))
+
+
 def delete_tracks_for_album(db_path: Path, album_id: str) -> None:
     with _connect(db_path) as con:
         con.execute("DELETE FROM synced_tracks WHERE album_id=?", (album_id,))
@@ -232,6 +245,27 @@ def delete_album(db_path: Path, album_id: str) -> None:
     with _connect(db_path) as con:
         con.execute("DELETE FROM synced_albums WHERE id=?", (album_id,))
         con.execute("DELETE FROM synced_tracks WHERE album_id=?", (album_id,))
+
+
+def prune_empty_albums(db_path: Path) -> int:
+    """Delete album rows that no longer have any tracks in synced_tracks."""
+    with _connect(db_path) as con:
+        rows = con.execute(
+            """
+            SELECT sa.id
+            FROM synced_albums sa
+            LEFT JOIN synced_tracks st ON st.album_id = sa.id
+            GROUP BY sa.id
+            HAVING COUNT(st.id) = 0
+            """
+        ).fetchall()
+        empty_album_ids = [r["id"] for r in rows]
+        if empty_album_ids:
+            con.executemany(
+                "DELETE FROM synced_albums WHERE id=?",
+                [(album_id,) for album_id in empty_album_ids],
+            )
+    return len(empty_album_ids)
 
 
 # ============================================================================
