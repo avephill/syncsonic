@@ -43,14 +43,14 @@
     </button>
   </div>
 
-  <div class="relative pr-10">
+  <div class="relative pr-14">
     <!-- Letter picker -->
-    <aside class="hidden md:flex sticky top-6 float-right ml-4 flex-col items-center gap-0.5 bg-gray-900/90 border border-gray-800 rounded-xl px-1.5 py-2">
+    <aside class="hidden md:flex sticky top-6 float-right ml-4 flex-col items-center gap-1 bg-gray-900/95 border border-gray-700 rounded-xl px-2 py-2.5 shadow-lg">
       {% if recent_artists %}
-      <a href="#section-recent" class="text-[10px] text-indigo-300 hover:text-white leading-4">R</a>
+      <a href="#section-recent" class="w-6 h-6 rounded-md flex items-center justify-center text-xs font-semibold text-indigo-300 hover:text-white hover:bg-gray-800 leading-none">R</a>
       {% endif %}
       {% for letter in groups.keys() %}
-      <a href="#section-{{ letter }}" class="text-[10px] text-gray-500 hover:text-white leading-4">{{ letter }}</a>
+      <a href="#section-{{ letter }}" class="w-6 h-6 rounded-md flex items-center justify-center text-xs font-semibold text-gray-400 hover:text-white hover:bg-gray-800 leading-none">{{ letter }}</a>
       {% endfor %}
     </aside>
 
@@ -59,7 +59,7 @@
       {% set d_alb = artist.synced_albums %}
       {% set d_trk = artist.synced_tracks %}
       {% set pct = (100 * d_alb / s_alb) | round | int if s_alb > 0 else (100 if d_alb > 0 else 0) %}
-      <div class="flex items-center gap-4 px-5 py-3 hover:bg-gray-800/50 transition-colors group border-l-[3px]
+      <div class="flex items-center gap-4 px-4 py-2 hover:bg-gray-800/50 transition-colors group border-l-[3px]
                   {% if artist.sync_status == 'complete' %}
                     border-emerald-500/90 bg-emerald-950/10
                   {% elif artist.sync_status == 'partial' %}
@@ -67,7 +67,7 @@
                   {% else %}
                     border-transparent
                   {% endif %}">
-        <label class="flex items-center gap-4 flex-1 min-w-0 cursor-pointer">
+        <label class="flex items-center gap-3 flex-1 min-w-0 cursor-pointer">
           <input type="checkbox"
                  name="artist_ids"
                  value="{{ artist.id }}"
@@ -75,11 +75,11 @@
                         focus:ring-indigo-500 focus:ring-offset-0 cursor-pointer"
                  {% if artist.selected %}checked{% endif %}
                  data-sync-toggle-lossless="{{ artist.id }}">
-          <span class="flex-1 min-w-0">
-            <span class="block text-sm text-gray-200 group-hover:text-white transition-colors truncate">
+          <span class="flex-1 min-w-0 flex items-center gap-3">
+            <span class="text-sm text-gray-200 group-hover:text-white transition-colors truncate">
               {{ artist.name }}
             </span>
-            <span class="block text-[11px] text-gray-500">Songs on F20: {{ d_trk }}</span>
+            <span class="text-xs text-gray-500 tabular-nums whitespace-nowrap">F20 songs: {{ d_trk }}</span>
           </span>
         </label>
         <div class="flex-shrink-0 w-[7.25rem] text-right"
@@ -101,9 +101,9 @@
           <span class="text-xs text-gray-600">—</span>
           {% endif %}
         </div>
-        <label class="flex items-center gap-2 flex-shrink-0 cursor-pointer"
+        <label class="flex items-center gap-2.5 flex-shrink-0 cursor-pointer"
                title="Sync original files (FLAC, etc.) instead of transcoded MP3">
-          <span class="text-[10px] uppercase tracking-wider text-gray-500">Original</span>
+          <span class="text-[11px] uppercase tracking-wider text-gray-500">Original</span>
           <input type="checkbox"
                  name="lossless_ids"
                  value="{{ artist.id }}"
