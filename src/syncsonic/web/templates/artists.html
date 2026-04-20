@@ -1,0 +1,187 @@
+{% extends "base.html" %}
+{% block title %}Artists – SyncSonic{% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-between mb-6">
+  <h1 class="text-2xl font-bold text-white">Artists</h1>
+  <div class="text-sm text-gray-500 text-right max-w-lg space-y-1">
+    <p>
+      Select artists to sync. <span class="text-indigo-300/90">Original</span> uses the server file
+      (e.g. FLAC); otherwise tracks use your Navidrome transcoding profile (e.g. MP3 V0).
+    </p>
+    <p class="text-xs text-gray-600">
+      <span class="inline-block w-2 h-2 rounded-full bg-emerald-500/90 align-middle mr-1"></span> all albums on device
+      &nbsp;·&nbsp;
+      <span class="inline-block w-2 h-2 rounded-full bg-amber-500/90 align-middle mr-1"></span> partial
+      &nbsp;·&nbsp;
+      <span class="text-gray-500">counts = on device / on server</span>
+    </p>
+    <p class="text-xs text-gray-600">
+      Default for newly selected artists:
+      <span class="text-gray-400">
+        {% if default_quality == 'original' %}Original{% else %}Transcoded{% endif %}
+      </span>
+      (change in Settings).
+    </p>
+  </div>
+</div>
+
+<form method="post" action="{{ url_for('artists_save') }}" data-default-quality="{{ default_quality }}">
+
+  <!-- Toolbar -->
+  <div class="flex items-center justify-between mb-4 bg-gray-900 rounded-xl px-5 py-3 border border-gray-800">
+    <div class="flex gap-3 text-sm">
+      <button type="button" onclick="setAll(true)"
+              class="text-indigo-400 hover:text-indigo-300 transition-colors">Select All</button>
+      <span class="text-gray-700">|</span>
+      <button type="button" onclick="setAll(false)"
+              class="text-gray-400 hover:text-gray-300 transition-colors">Deselect All</button>
+    </div>
+    <button type="submit"
+            class="bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold px-4 py-1.5 rounded-lg transition-colors">
+      Save Selection
+    </button>
+  </div>
+
+  <div class="relative pr-10">
+    <!-- Letter picker -->
+    <aside class="hidden md:flex sticky top-6 float-right ml-4 flex-col items-center gap-0.5 bg-gray-900/90 border border-gray-800 rounded-xl px-1.5 py-2">
+      {% if recent_artists %}
+      <a href="#section-recent" class="text-[10px] text-indigo-300 hover:text-white leading-4">R</a>
+      {% endif %}
+      {% for letter in groups.keys() %}
+      <a href="#section-{{ letter }}" class="text-[10px] text-gray-500 hover:text-white leading-4">{{ letter }}</a>
+      {% endfor %}
+    </aside>
+
+    {% macro artist_row(artist) -%}
+      {% set s_alb = artist.server_albums %}
+      {% set d_alb = artist.synced_albums %}
+      {% set d_trk = artist.synced_tracks %}
+      {% set pct = (100 * d_alb / s_alb) | round | int if s_alb > 0 else (100 if d_alb > 0 else 0) %}
+      <div class="flex items-center gap-4 px-5 py-3 hover:bg-gray-800/50 transition-colors group border-l-[3px]
+                  {% if artist.sync_status == 'complete' %}
+                    border-emerald-500/90 bg-emerald-950/10
+                  {% elif artist.sync_status == 'partial' %}
+                    border-amber-500/90 bg-amber-950/10
+                  {% else %}
+                    border-transparent
+                  {% endif %}">
+        <label class="flex items-center gap-4 flex-1 min-w-0 cursor-pointer">
+          <input type="checkbox"
+                 name="artist_ids"
+                 value="{{ artist.id }}"
+                 class="artist-cb w-4 h-4 rounded border-gray-600 bg-gray-800 text-indigo-500
+                        focus:ring-indigo-500 focus:ring-offset-0 cursor-pointer"
+                 {% if artist.selected %}checked{% endif %}
+                 data-sync-toggle-lossless="{{ artist.id }}">
+          <span class="flex-1 min-w-0">
+            <span class="block text-sm text-gray-200 group-hover:text-white transition-colors truncate">
+              {{ artist.name }}
+            </span>
+            <span class="block text-[11px] text-gray-500">Songs on F20: {{ d_trk }}</span>
+          </span>
+        </label>
+        <div class="flex-shrink-0 w-[7.25rem] text-right"
+             title="Albums copied to the player vs. albums for this artist in Navidrome">
+          {% if s_alb > 0 %}
+          <div class="text-xs font-medium tabular-nums leading-tight">
+            <span class="{% if artist.sync_status == 'complete' %}text-emerald-300{% elif artist.sync_status == 'partial' %}text-amber-300{% else %}text-gray-500{% endif %}">{{ d_alb }}</span><span class="text-gray-600">/</span><span class="text-gray-400">{{ s_alb }}</span>
+          </div>
+          <div class="mt-1 h-1 rounded-full bg-gray-800/90 overflow-hidden">
+            <div class="h-full rounded-full transition-all
+                        {% if artist.sync_status == 'complete' %}bg-emerald-500/85
+                        {% elif artist.sync_status == 'partial' %}bg-amber-500/85
+                        {% else %}bg-gray-600/60{% endif %}"
+                 style="width: {{ pct if pct <= 100 else 100 }}%"></div>
+          </div>
+          {% elif d_alb > 0 %}
+          <span class="text-xs tabular-nums text-gray-400" title="Server did not report album count">{{ d_alb }} on device</span>
+          {% else %}
+          <span class="text-xs text-gray-600">—</span>
+          {% endif %}
+        </div>
+        <label class="flex items-center gap-2 flex-shrink-0 cursor-pointer"
+               title="Sync original files (FLAC, etc.) instead of transcoded MP3">
+          <span class="text-[10px] uppercase tracking-wider text-gray-500">Original</span>
+          <input type="checkbox"
+                 name="lossless_ids"
+                 value="{{ artist.id }}"
+                 class="lossless-cb w-4 h-4 rounded border-gray-600 bg-gray-800 text-amber-500
+                        focus:ring-amber-500 focus:ring-offset-0 cursor-pointer"
+                 {% if artist.lossless %}checked{% endif %}>
+        </label>
+      </div>
+    {%- endmacro %}
+
+    {% if recent_artists %}
+    <div id="section-recent" class="mb-5">
+      <h2 class="text-xs font-bold text-indigo-300 uppercase tracking-widest mb-2 pl-1">
+        Recently Added (A-Z)
+      </h2>
+      <div class="bg-gray-900 rounded-xl border border-indigo-900/70 divide-y divide-gray-800">
+        {% for artist in recent_artists %}
+          {{ artist_row(artist) }}
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Artist groups -->
+    {% for letter, artist_list in groups.items() %}
+    <div id="section-{{ letter }}" class="mb-5">
+      <h2 class="text-xs font-bold text-gray-500 uppercase tracking-widest mb-2 pl-1">{{ letter }}</h2>
+      <div class="bg-gray-900 rounded-xl border border-gray-800 divide-y divide-gray-800">
+        {% for artist in artist_list %}
+          {{ artist_row(artist) }}
+        {% endfor %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <!-- Sticky save bar -->
+  <div class="sticky bottom-4 mt-4 flex justify-end">
+    <button type="submit"
+            class="bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold
+                   px-6 py-2.5 rounded-xl shadow-lg transition-colors">
+      Save Selection
+    </button>
+  </div>
+
+</form>
+
+<script>
+const formEl = document.querySelector('form[data-default-quality]');
+const defaultQuality = formEl ? formEl.getAttribute('data-default-quality') : 'transcode';
+const defaultOriginal = defaultQuality === 'original';
+
+function setArtistOriginal(id, checked) {
+  document.querySelectorAll('.lossless-cb[value="' + id + '"]').forEach(function (lb) {
+    lb.checked = checked;
+  });
+}
+
+function setAll(checked) {
+  document.querySelectorAll('.artist-cb').forEach(function (cb) {
+    cb.checked = checked;
+    if (checked) {
+      setArtistOriginal(cb.value, defaultOriginal);
+    }
+  });
+  if (!checked) {
+    document.querySelectorAll('.lossless-cb').forEach(cb => cb.checked = false);
+  }
+}
+document.querySelectorAll('.artist-cb').forEach(function (main) {
+  main.addEventListener('change', function () {
+    var id = main.getAttribute('data-sync-toggle-lossless');
+    if (!main.checked) {
+      setArtistOriginal(id, false);
+    } else {
+      setArtistOriginal(id, defaultOriginal);
+    }
+  });
+});
+</script>
+{% endblock %}

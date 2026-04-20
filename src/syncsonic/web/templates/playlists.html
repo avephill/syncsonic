@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block title %}Playlists – SyncSonic{% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-between mb-6">
+  <h1 class="text-2xl font-bold text-white">Playlists</h1>
+  <div class="text-sm text-gray-500">
+    Check playlists to include in your next sync.
+  </div>
+</div>
+
+<form method="post" action="{{ url_for('playlists_save') }}">
+
+  <!-- Toolbar -->
+  <div class="flex items-center justify-between mb-4 bg-gray-900 rounded-xl px-5 py-3 border border-gray-800">
+    <div class="flex gap-3 text-sm">
+      <button type="button" onclick="setAll(true)"
+              class="text-indigo-400 hover:text-indigo-300 transition-colors">Select All</button>
+      <span class="text-gray-700">|</span>
+      <button type="button" onclick="setAll(false)"
+              class="text-gray-400 hover:text-gray-300 transition-colors">Deselect All</button>
+    </div>
+    <button type="submit"
+            class="bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold px-4 py-1.5 rounded-lg transition-colors">
+      Save Selection
+    </button>
+  </div>
+
+  <div class="bg-gray-900 rounded-xl border border-gray-800 divide-y divide-gray-800">
+    {% for pl in playlists %}
+    <div class="flex items-center gap-4 px-5 py-3 hover:bg-gray-800/50 transition-colors group">
+      <label class="flex items-center gap-4 flex-1 cursor-pointer">
+        <input type="checkbox"
+               name="playlist_ids"
+               value="{{ pl.id }}"
+               class="pl-cb w-4 h-4 rounded border-gray-600 bg-gray-800 text-indigo-500
+                      focus:ring-indigo-500 focus:ring-offset-0 cursor-pointer"
+               {% if pl.selected %}checked{% endif %}>
+        <span class="text-sm text-gray-200 group-hover:text-white transition-colors">
+          {{ pl.name }}
+        </span>
+      </label>
+      <span class="text-xs text-gray-600 flex-shrink-0">
+        {{ pl.get('songCount', '') }}{% if pl.get('songCount') %} track{% if pl.songCount != 1 %}s{% endif %}{% endif %}
+      </span>
+      {% if pl.conflict %}
+      <a href="{{ url_for('resolve_conflict', playlist_id=pl.id) }}"
+         class="flex items-center gap-1.5 text-xs text-yellow-400 hover:text-yellow-300
+                bg-yellow-900/30 border border-yellow-700/50 px-2.5 py-1 rounded-lg transition-colors flex-shrink-0">
+        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round"
+                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+        </svg>
+        Conflict
+      </a>
+      {% endif %}
+    </div>
+    {% else %}
+    <div class="px-5 py-8 text-center text-sm text-gray-500">
+      No playlists found on server.
+    </div>
+    {% endfor %}
+  </div>
+
+  <div class="sticky bottom-4 mt-4 flex justify-end">
+    <button type="submit"
+            class="bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold
+                   px-6 py-2.5 rounded-xl shadow-lg transition-colors">
+      Save Selection
+    </button>
+  </div>
+
+</form>
+
+<script>
+function setAll(checked) {
+  document.querySelectorAll('.pl-cb').forEach(cb => cb.checked = checked);
+}
+</script>
+{% endblock %}

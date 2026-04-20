@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+{% block title %}Sync Progress – SyncSonic{% endblock %}
+
+{% block content %}
+<h1 class="text-2xl font-bold text-white mb-6">Sync Progress</h1>
+
+<div id="status-bar" class="bg-gray-900 rounded-xl border border-gray-800 p-5 mb-6">
+  <div class="flex items-center gap-3 mb-3">
+    <span id="status-dot" class="w-2.5 h-2.5 rounded-full bg-gray-500"></span>
+    <span id="status-label" class="text-sm font-medium text-gray-300">
+      {% if running %}Connecting…{% else %}Idle{% endif %}
+    </span>
+  </div>
+  <!-- Progress bar -->
+  <div class="w-full bg-gray-800 rounded-full h-2 mb-1">
+    <div id="progress-bar" class="bg-indigo-500 h-2 rounded-full transition-all duration-300" style="width:0%"></div>
+  </div>
+  <p id="progress-text" class="text-xs text-gray-500 mt-1"></p>
+</div>
+
+<!-- Log -->
+<div id="log"
+     class="bg-gray-900 rounded-xl border border-gray-800 p-4 h-80 overflow-y-auto font-mono text-xs text-gray-300 space-y-0.5">
+  {% if not running %}
+    <p class="text-gray-600">No sync in progress. Use "Sync Now" to start.</p>
+  {% endif %}
+</div>
+
+<div class="mt-4 flex flex-wrap gap-3 items-center">
+  {% if running %}
+  <form method="post" action="{{ url_for('sync_cancel') }}" id="cancel-sync-form">
+    <button type="submit"
+            class="bg-red-900/80 hover:bg-red-800 border border-red-700 text-red-100 text-sm font-medium px-5 py-2 rounded-lg transition-colors">
+      Stop sync
+    </button>
+  </form>
+  {% endif %}
+  <a href="{{ url_for('dashboard') }}"
+     class="bg-gray-800 hover:bg-gray-700 text-gray-300 text-sm font-medium px-5 py-2 rounded-lg transition-colors">
+    Back to Dashboard
+  </a>
+</div>
+
+{% if running %}
+<script>
+(function() {
+  const log = document.getElementById('log');
+  const dot = document.getElementById('status-dot');
+  const label = document.getElementById('status-label');
+  const bar = document.getElementById('progress-bar');
+  const progressText = document.getElementById('progress-text');
+
+  dot.className = 'w-2.5 h-2.5 rounded-full bg-indigo-400 animate-pulse';
+  label.textContent = 'Syncing…';
+
+  let stoppedByUser = false;
+
+  function appendLog(msg, cls) {
+    const p = document.createElement('p');
+    p.className = cls || 'text-gray-300';
+    p.textContent = msg;
+    log.appendChild(p);
+    log.scrollTop = log.scrollHeight;
+  }
+
+  const es = new EventSource('/sync/stream');
+
+  es.onmessage = function(e) {
+    const ev = JSON.parse(e.data);
+
+    if (ev.type === 'heartbeat') return;
+
+    if (ev.type === 'progress') {
+      label.textContent = ev.message;
+      appendLog(ev.message);
+      if (ev.total > 0) {
+        const pct = Math.round((ev.current / ev.total) * 100);
+        bar.style.width = pct + '%';
+        progressText.textContent = ev.current + ' / ' + ev.total;
+      }
+    } else if (ev.type === 'error') {
+      appendLog('✗ ' + ev.message, 'text-red-400');
+    } else if (ev.type === 'done') {
+      appendLog('✓ Done: ' + JSON.stringify(ev.summary), 'text-green-400');
+    } else if (ev.type === 'cancelled') {
+      stoppedByUser = true;
+      dot.className = 'w-2.5 h-2.5 rounded-full bg-amber-400';
+      label.textContent = 'Sync stopped';
+      appendLog('— ' + (ev.message || 'Sync cancelled.') + ' —', 'text-amber-300');
+    } else if (ev.type === 'finished') {
+      if (!stoppedByUser) {
+        dot.className = 'w-2.5 h-2.5 rounded-full bg-green-400';
+        label.textContent = 'Sync complete';
+        bar.style.width = '100%';
+        progressText.textContent = '';
+        appendLog('— Sync finished —', 'text-green-400');
+      }
+      es.close();
+    }
+  };
+
+  es.onerror = function() {
+    dot.className = 'w-2.5 h-2.5 rounded-full bg-red-400';
+    label.textContent = 'Connection lost';
+    appendLog('Connection to sync stream lost.', 'text-red-400');
+    es.close();
+  };
+})();
+</script>
+{% endif %}
+{% endblock %}

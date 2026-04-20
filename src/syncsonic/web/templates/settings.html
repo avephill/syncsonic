@@ -1,0 +1,170 @@
+{% extends "base.html" %}
+{% block title %}Settings – SyncSonic{% endblock %}
+
+{% block content %}
+<h1 class="text-2xl font-bold text-white mb-6">Settings</h1>
+
+<form method="post" action="{{ url_for('settings_save') }}" class="space-y-6 max-w-xl">
+
+  <!-- Server -->
+  <div class="bg-gray-900 rounded-xl border border-gray-800 p-5">
+    <h2 class="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4">Navidrome Server</h2>
+    <div class="space-y-4">
+      <div>
+        <label class="block text-xs text-gray-400 mb-1" for="host">Server URL</label>
+        <input type="url" id="host" name="host"
+               value="{{ config.server.host }}"
+               placeholder="https://music.example.com"
+               class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white
+                      focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent placeholder-gray-600">
+      </div>
+      <div>
+        <label class="block text-xs text-gray-400 mb-1" for="username">Username</label>
+        <input type="text" id="username" name="username"
+               value="{{ config.server.username }}"
+               autocomplete="username"
+               class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white
+                      focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+      </div>
+      <div>
+        <label class="block text-xs text-gray-400 mb-1" for="password">Password</label>
+        <input type="password" id="password" name="password"
+               value=""
+               autocomplete="current-password"
+               placeholder="{% if has_session_password %}Leave blank to keep session password{% else %}Required for API access{% endif %}"
+               class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white
+                      focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent placeholder-gray-600">
+        {% if has_env_password %}
+        <p class="text-xs text-green-600 mt-1">
+          Password is set via the <code>NAVIDROME_PASSWORD</code> environment variable — no need to enter it here.
+        </p>
+        {% else %}
+        <p class="text-xs text-gray-600 mt-1">
+          Not saved to disk. Stored in this browser session only (signed cookie). Re-enter to change it.
+          Alternatively, set the <code class="text-gray-500">NAVIDROME_PASSWORD</code> environment variable
+          before starting <code class="text-gray-500">syncsonic-web</code>.
+        </p>
+        {% if has_session_password %}
+        <button type="submit"
+                form="clear-session-password-form"
+                class="mt-2 block text-xs text-gray-500 hover:text-red-400 transition-colors">
+          Clear session password
+        </button>
+        {% endif %}
+        {% endif %}
+      </div>
+      <div>
+        <p class="text-xs text-gray-600 mb-2">
+          <strong class="text-gray-400">Save</strong> / <strong class="text-gray-400">Test</strong> write
+          URL, username, device, and sync options to <code class="text-gray-500">~/.config/syncsonic/config.json</code>.
+          Password is never written there. If the URL is wrong or this machine cannot reach Navidrome, nothing will show in Navidrome logs.
+        </p>
+        <button type="submit"
+                formaction="{{ url_for('test_connection') }}"
+                formmethod="post"
+                class="inline-flex items-center gap-1.5 text-sm font-medium text-indigo-400 hover:text-indigo-300
+                       bg-gray-800/80 hover:bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 transition-colors">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+          </svg>
+          Test Connection
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Device -->
+  <div class="bg-gray-900 rounded-xl border border-gray-800 p-5">
+    <h2 class="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4">Device</h2>
+    <div class="space-y-3">
+      <div>
+        <label class="block text-xs text-gray-400 mb-1" for="mount_path">Mount Path</label>
+        <input type="text" id="mount_path" name="mount_path"
+               value="{{ config.device.mount_path }}"
+               placeholder="Leave blank for auto-detect"
+               class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white
+                      focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent placeholder-gray-600">
+        <p class="text-xs text-gray-600 mt-1">Leave blank to auto-detect any mounted Rockbox device.</p>
+      </div>
+      {% if detected_devices %}
+      <div>
+        <p class="text-xs text-gray-500 mb-1">Detected Rockbox devices:</p>
+        <ul class="space-y-1">
+          {% for dev in detected_devices %}
+          <li class="flex items-center gap-2">
+            <span class="w-1.5 h-1.5 rounded-full bg-green-400 flex-shrink-0"></span>
+            <button type="button" onclick="document.getElementById('mount_path').value='{{ dev }}'"
+                    class="text-xs text-indigo-400 hover:text-indigo-300 font-mono transition-colors">
+              {{ dev }}
+            </button>
+          </li>
+          {% endfor %}
+        </ul>
+      </div>
+      {% else %}
+      <p class="text-xs text-gray-600">No Rockbox device currently detected.</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Sync options -->
+  <div class="bg-gray-900 rounded-xl border border-gray-800 p-5">
+    <h2 class="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4">Sync Options</h2>
+    <div class="space-y-4">
+      <div>
+        <label class="block text-xs text-gray-400 mb-1" for="transcode_format">
+          Transcode Profile Name
+        </label>
+        <input type="text" id="transcode_format" name="transcode_format"
+               value="{{ config.sync.transcode_format }}"
+               placeholder="mp3"
+               class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white
+                      focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent placeholder-gray-600">
+        <p class="text-xs text-gray-600 mt-1">
+          Must match a profile name in Navidrome → Settings → Transcoding.
+          For MP3 V0, create a profile named <code class="text-gray-400">mp3v0</code> with
+          <code class="text-gray-400">ffmpeg -i %s -q:a 0 -map_metadata 0 -f mp3 -</code>.
+          On the <a href="{{ url_for('artists') }}" class="text-indigo-400 hover:underline">Artists</a>
+          page you can enable <strong class="text-gray-400">Original</strong> per artist to download
+          source files (e.g. FLAC) instead of this transcoded format.
+        </p>
+      </div>
+      <div>
+        <label class="block text-xs text-gray-400 mb-1" for="default_quality">Default Artist Quality</label>
+        <select id="default_quality" name="default_quality"
+                class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white
+                       focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+          <option value="transcode" {% if config.sync.default_quality != 'original' %}selected{% endif %}>
+            Transcoded by default (use artist "Original" toggle as override)
+          </option>
+          <option value="original" {% if config.sync.default_quality == 'original' %}selected{% endif %}>
+            Original by default (uncheck "Original" per artist to transcode)
+          </option>
+        </select>
+        <p class="text-xs text-gray-600 mt-1">
+          Controls what newly selected artists default to on the
+          <a href="{{ url_for('artists') }}" class="text-indigo-400 hover:underline">Artists</a> page.
+          Existing artist choices remain unchanged until edited.
+        </p>
+      </div>
+      <div class="flex items-center gap-3">
+        <input type="checkbox" id="sync_starred" name="sync_starred"
+               {% if config.sync.sync_starred %}checked{% endif %}
+               class="w-4 h-4 rounded border-gray-600 bg-gray-800 text-indigo-500
+                      focus:ring-indigo-500 focus:ring-offset-0">
+        <label for="sync_starred" class="text-sm text-gray-300">
+          Sync starred tracks as "Navidrome Starred" playlist on device
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <button type="submit"
+          class="bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold px-6 py-2.5 rounded-lg transition-colors">
+    Save Settings
+  </button>
+
+</form>
+
+<form id="clear-session-password-form" method="post" action="{{ url_for('clear_session_password') }}" class="hidden" aria-hidden="true"></form>
+{% endblock %}

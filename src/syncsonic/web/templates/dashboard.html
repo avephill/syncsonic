@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% block title %}Dashboard – SyncSonic{% endblock %}
+
+{% block content %}
+<h1 class="text-2xl font-bold text-white mb-6">Dashboard</h1>
+
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+
+  <!-- Server status -->
+  <div class="bg-gray-900 rounded-xl p-5 border border-gray-800">
+    <h2 class="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3">Server</h2>
+    {% if config.server.host %}
+      <div class="flex items-center gap-2">
+        <span class="w-2 h-2 rounded-full {% if server_ok %}bg-green-400{% else %}bg-red-400{% endif %}"></span>
+        <span class="text-sm {% if server_ok %}text-green-300{% else %}text-red-300{% endif %}">
+          {% if server_ok %}Connected{% else %}Unreachable{% endif %}
+        </span>
+      </div>
+      <p class="text-xs text-gray-500 mt-1">{{ config.server.host }}</p>
+    {% else %}
+      <p class="text-sm text-gray-500">Not configured. <a href="{{ url_for('settings') }}" class="text-indigo-400 hover:underline">Go to Settings</a></p>
+    {% endif %}
+  </div>
+
+  <!-- Device status -->
+  <div class="bg-gray-900 rounded-xl p-5 border border-gray-800">
+    <h2 class="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3">Device</h2>
+    {% if device %}
+      <div class="flex items-center gap-2 mb-2">
+        <span class="w-2 h-2 rounded-full bg-green-400"></span>
+        <span class="text-sm text-green-300">{{ device.name }} connected</span>
+      </div>
+      <div class="text-xs text-gray-500 space-y-0.5">
+        <p class="font-mono text-gray-600 truncate" title="Mount path">{{ device.mount }}</p>
+        <p>{{ device.used_gb }} GB used / {{ device.total_gb }} GB total</p>
+        <p>{{ device.free_gb }} GB free</p>
+        {% if device.has_scrobbler_log %}
+          <p class="text-yellow-400">Scrobbler log present — <a href="{{ url_for('scrobble') }}" class="underline">review scrobbles</a></p>
+        {% endif %}
+      </div>
+    {% else %}
+      <div class="flex items-center gap-2">
+        <span class="w-2 h-2 rounded-full bg-gray-500"></span>
+        <span class="text-sm text-gray-400">No Rockbox device detected</span>
+      </div>
+      <p class="text-xs text-gray-600 mt-1">Connect via USB or set path in Settings</p>
+    {% endif %}
+  </div>
+
+</div>
+
+<!-- Manifest stats -->
+<div class="bg-gray-900 rounded-xl p-5 border border-gray-800 mb-6">
+  <h2 class="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4">Manifest</h2>
+  <div class="grid grid-cols-2 sm:grid-cols-5 gap-4">
+    {% for label, val in [
+        ('Tracks', stats.tracks),
+        ('Albums', stats.albums),
+        ('Playlists', stats.playlists),
+        ('Artists selected', stats.selected_artists),
+        ('Playlists selected', stats.selected_playlists),
+    ] %}
+    <div class="text-center">
+      <p class="text-2xl font-bold text-white">{{ val }}</p>
+      <p class="text-xs text-gray-500 mt-0.5">{{ label }}</p>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+<!-- Actions -->
+<div class="flex flex-wrap gap-3">
+  <form method="post" action="{{ url_for('sync_start') }}">
+    <button type="submit"
+            class="bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold px-5 py-2.5 rounded-lg transition-colors">
+      Sync Now
+    </button>
+  </form>
+  <a href="{{ url_for('sync_progress') }}"
+     class="bg-gray-800 hover:bg-gray-700 text-gray-200 text-sm font-medium px-5 py-2.5 rounded-lg transition-colors">
+    View Progress
+  </a>
+  {% if device %}
+  <form method="post" action="{{ url_for('rebuild_manifest_route') }}"
+        onsubmit="return confirm('Scan device and rebuild manifest? This may take a moment.')">
+    <button type="submit"
+            class="bg-gray-800 hover:bg-gray-700 text-gray-200 text-sm font-medium px-5 py-2.5 rounded-lg transition-colors">
+      Rebuild Manifest
+    </button>
+  </form>
+  <form method="post" action="{{ url_for('device_eject') }}"
+        onsubmit="return confirm('Eject this device? Close any other apps using this volume first.')">
+    <button type="submit"
+            class="bg-gray-800 hover:bg-amber-900/40 border border-gray-700 hover:border-amber-700/50 text-amber-100/90 text-sm font-medium px-5 py-2.5 rounded-lg transition-colors">
+      Eject device
+    </button>
+  </form>
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% block title %}Resolve Conflict – {{ conflict.name }} – SyncSonic{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+  <a href="{{ url_for('playlists') }}" class="text-sm text-gray-500 hover:text-gray-300 transition-colors">
+    ← Back to Playlists
+  </a>
+  <h1 class="text-2xl font-bold text-white mt-2">Resolve Conflict</h1>
+  <p class="text-gray-400 text-sm mt-1">
+    <span class="font-medium text-white">{{ conflict.name }}</span> was edited both on the device
+    and on Navidrome since the last sync. Build the merged version below.
+  </p>
+</div>
+
+<form method="post" action="{{ url_for('resolve_conflict_submit', playlist_id=conflict.id) }}">
+  <input type="hidden" name="playlist_name" value="{{ conflict.name }}">
+
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+
+    <!-- Server version -->
+    <div>
+      <h2 class="text-sm font-semibold text-indigo-400 uppercase tracking-wider mb-3">
+        Navidrome version ({{ conflict.server_tracks | length }} tracks)
+      </h2>
+      <div class="bg-gray-900 rounded-xl border border-gray-800 divide-y divide-gray-800 max-h-96 overflow-y-auto">
+        {% for track in conflict.server_tracks %}
+        <label class="flex items-center gap-3 px-4 py-2.5 cursor-pointer hover:bg-gray-800/50 transition-colors group">
+          <input type="checkbox"
+                 name="merged_track_ids"
+                 value="{{ track.id }}"
+                 checked
+                 class="w-4 h-4 rounded border-gray-600 bg-gray-800 text-indigo-500
+                        focus:ring-indigo-500 focus:ring-offset-0">
+          <span class="flex-1 min-w-0">
+            <span class="block text-sm text-gray-200 group-hover:text-white truncate">{{ track.title }}</span>
+            <span class="block text-xs text-gray-500 truncate">{{ track.artist }} – {{ track.album }}</span>
+          </span>
+        </label>
+        {% else %}
+        <p class="px-4 py-4 text-sm text-gray-500">Empty playlist on server.</p>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- Device version -->
+    <div>
+      <h2 class="text-sm font-semibold text-yellow-400 uppercase tracking-wider mb-3">
+        Device version ({{ conflict.device_tracks | length }} tracks)
+      </h2>
+      <div class="bg-gray-900 rounded-xl border border-gray-800 divide-y divide-gray-800 max-h-96 overflow-y-auto">
+        {% for path in conflict.device_tracks %}
+        <div class="flex items-center gap-3 px-4 py-2.5">
+          <span class="w-4 h-4 flex-shrink-0 text-gray-600">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2z"/>
+            </svg>
+          </span>
+          <span class="text-xs text-gray-400 truncate font-mono">{{ path }}</span>
+        </div>
+        {% else %}
+        <p class="px-4 py-4 text-sm text-gray-500">No tracks found on device.</p>
+        {% endfor %}
+      </div>
+      <p class="text-xs text-gray-600 mt-2">
+        Device tracks are shown for reference. Check items on the left to include them in the merged result.
+      </p>
+    </div>
+
+  </div>
+
+  <div class="flex gap-3">
+    <button type="submit"
+            class="bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold px-6 py-2.5 rounded-lg transition-colors">
+      Save Merged Playlist
+    </button>
+    <a href="{{ url_for('playlists') }}"
+       class="bg-gray-800 hover:bg-gray-700 text-gray-300 text-sm font-medium px-6 py-2.5 rounded-lg transition-colors">
+      Cancel
+    </a>
+  </div>
+
+</form>
+{% endblock %}
